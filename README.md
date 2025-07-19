@@ -19,14 +19,6 @@ This app allows you to:
 ✅ Datatables for searching & sorting  
 ✅ Clean and responsive design using **Bootstrap 5**
 
----
-
-
-**Product List Page**  
-![Product List](screenshots/product-list.png)
-
-**Create Product Page**  
-![Create Product](screenshots/create-product.png)
 
 ---
 
