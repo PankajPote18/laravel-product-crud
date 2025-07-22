@@ -4,42 +4,33 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    // ✅ Show all active products (Soft deleted ones are hidden by default)
     public function index()
     {
         $products = Product::latest()->get();
         return view('products.index', compact('products'));
     }
 
+    // ✅ Show form to create new product
     public function create()
     {
         return view('products.create');
     }
 
+    // ✅ Store a new product
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100|unique:products',
-            'price' => 'required|numeric|min:1|max:1000000',
-            'description' => 'required|string|min:10|max:1000',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120' 
-        ], [
-            
-            'name.required' => 'The product name is required.',
-            'sku.required' => 'The SKU is required.',
-            'sku.unique' => 'This SKU already exists, please choose another.',
-            'price.required' => 'Price is required.',
-            'price.numeric' => 'Price must be a valid number.',
-            'price.min' => 'Price must be at least ₹1.',
-            'description.required' => 'Description is required.',
-            'description.min' => 'Description must be at least 10 characters.',
-            'image.image' => 'The uploaded file must be an image.',
-            'image.mimes' => 'Only JPG, JPEG, and PNG formats are allowed.',
-            'image.max' => 'Image size must not exceed 5MB.',
+            'price' => 'required|numeric|min:0',
+            'description' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
         $imagePath = null;
@@ -58,17 +49,19 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product created successfully!');
     }
 
-
-    public function edit(Product $product)
-    {
-        return view('products.edit', compact('product'));
-    }
-
+    // ✅ Show single product details
     public function show(Product $product)
     {
         return view('products.show', compact('product'));
     }
 
+    // ✅ Show edit form
+    public function edit(Product $product)
+    {
+        return view('products.edit', compact('product'));
+    }
+
+    // ✅ Update product
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
@@ -76,15 +69,11 @@ class ProductController extends Controller
             'sku' => 'required|string|max:100|unique:products,sku,' . $product->id,
             'price' => 'required|numeric|min:0',
             'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120'
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
         $imagePath = $product->image;
-
         if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
             $imagePath = $request->file('image')->store('products', 'public');
         }
 
@@ -99,14 +88,36 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated successfully!');
     }
 
+    // ✅ Soft delete product
     public function destroy(Product $product)
     {
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-
         $product->delete();
-
         return redirect()->route('products.index')->with('success', 'Product deleted successfully!');
+    }
+
+    public function trash()
+    {
+        $products = Product::onlyTrashed()->get(); // ✅ Get only soft-deleted products
+        return view('products.trash', compact('products'));
+    }
+
+    public function restore($id)
+    {
+        $product = Product::onlyTrashed()->where('id', $id)->first();
+        if ($product) {
+            $product->restore(); // ✅ Restore the product
+            return redirect()->route('products.trash')->with('success', 'Product restored successfully!');
+        }
+        return redirect()->route('products.trash')->with('error', 'Product not found!');
+    }
+
+    public function forceDelete($id)
+    {
+        $product = Product::onlyTrashed()->where('id', $id)->first();
+        if ($product) {
+            $product->forceDelete(); // ✅ Permanently delete
+            return redirect()->route('products.trash')->with('success', 'Product permanently deleted!');
+        }
+        return redirect()->route('products.trash')->with('error', 'Product not found!');
     }
 }

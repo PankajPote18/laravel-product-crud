@@ -9,13 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();  
             $table->string('name');
             $table->string('sku')->unique();
             $table->decimal('price', 10, 2);
             $table->text('description');
             $table->string('image')->nullable();
             $table->timestamps();
+            $table->softDeletes();  
         });
     }
 
